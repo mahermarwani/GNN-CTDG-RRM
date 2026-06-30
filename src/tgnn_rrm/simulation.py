@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import log, pi
+from math import log, log10, pi, sqrt
 from typing import Iterable
 
 import torch
@@ -25,9 +25,13 @@ class DynamicNetworkConfig:
     link_creation_probability: float = 0.15
     mean_link_duration_s: float = 10.0
     num_rbs: int = 5
+    carrier_frequency_hz: float = 2.4e9
+    antenna_gain_dbi: float = 2.5
     path_loss_exponent: float = 2.5
     shadowing_std_db: float = 8.0
+    fading_correlation: float = 0.9
     csi_error_std: float = 0.1
+    csi_error_correlation: float = 0.9
     min_distance_m: float = 1.0
 
     def validate(self) -> None:
@@ -47,12 +51,18 @@ class DynamicNetworkConfig:
             raise ValueError("mean_link_duration_s must be positive")
         if self.num_rbs <= 0:
             raise ValueError("num_rbs must be positive")
+        if self.carrier_frequency_hz <= 0:
+            raise ValueError("carrier_frequency_hz must be positive")
         if self.path_loss_exponent <= 0:
             raise ValueError("path_loss_exponent must be positive")
         if self.shadowing_std_db < 0:
             raise ValueError("shadowing_std_db must be non-negative")
+        if not 0.0 <= self.fading_correlation <= 1.0:
+            raise ValueError("fading_correlation must be in [0, 1]")
         if not 0.0 <= self.csi_error_std < 1.0:
             raise ValueError("csi_error_std must be in [0, 1)")
+        if not 0.0 <= self.csi_error_correlation <= 1.0:
+            raise ValueError("csi_error_correlation must be in [0, 1]")
         if self.min_distance_m <= 0:
             raise ValueError("min_distance_m must be positive")
 
@@ -114,6 +124,8 @@ class DynamicD2DSimulator:
         self._active_links: dict[int, D2DLink] = {}
         self._previous_active_ids: tuple[int, ...] = ()
         self._previous_gains: torch.Tensor | None = None
+        self._fading_state: dict[tuple[int, int], torch.Tensor] = {}
+        self._error_state: dict[tuple[int, int], torch.Tensor] = {}
 
         self._positions = self._initial_positions()
         self._velocities = self._initial_velocities()
@@ -235,17 +247,49 @@ class DynamicD2DSimulator:
                 distance = torch.linalg.vector_norm(receiver_position - transmitter_position).clamp_min(
                     self.config.min_distance_m
                 )
-                path_loss = distance.pow(-self.config.path_loss_exponent)
+                link_key = (transmitter_link.transmitter_id, receiver_link.receiver_id)
+                large_scale_gain = self._large_scale_gain(distance)
                 shadowing_db = torch.randn((self.config.num_rbs,), generator=self.generator) * self.config.shadowing_std_db
                 shadowing = torch.pow(torch.tensor(10.0), shadowing_db / 10.0)
-                fading_amplitude = torch.sqrt(self._exponential_tensor((self.config.num_rbs,)))
-                csi_error = torch.randn((self.config.num_rbs,), generator=self.generator)
-                observed_amplitude = (
-                    (1.0 - self.config.csi_error_std**2) ** 0.5 * fading_amplitude
-                    + self.config.csi_error_std * csi_error
-                ).abs()
-                gains[receiver_index, transmitter_index, :] = path_loss * shadowing * observed_amplitude.pow(2)
+                fading = self._complex_channel_state(
+                    state=self._fading_state,
+                    key=link_key,
+                    correlation=self.config.fading_correlation,
+                )
+                csi_error = self._complex_channel_state(
+                    state=self._error_state,
+                    key=link_key,
+                    correlation=self.config.csi_error_correlation,
+                )
+                observed_channel = sqrt(1.0 - self.config.csi_error_std**2) * fading + self.config.csi_error_std * csi_error
+                small_scale_gain = observed_channel.pow(2).sum(dim=1)
+                gains[receiver_index, transmitter_index, :] = large_scale_gain * shadowing * small_scale_gain
         return gains
+
+    def _large_scale_gain(self, distance_m: torch.Tensor) -> torch.Tensor:
+        speed_of_light_mps = 299_792_458.0
+        reference_path_loss_db = 20.0 * log10(
+            4.0 * pi * self.config.min_distance_m * self.config.carrier_frequency_hz / speed_of_light_mps
+        )
+        distance_ratio = (distance_m / self.config.min_distance_m).clamp_min(1.0)
+        path_loss_db = reference_path_loss_db + 10.0 * self.config.path_loss_exponent * torch.log10(distance_ratio)
+        antenna_gain_db = 2.0 * self.config.antenna_gain_dbi
+        return torch.pow(torch.tensor(10.0), (antenna_gain_db - path_loss_db) / 10.0)
+
+    def _complex_channel_state(
+        self,
+        state: dict[tuple[int, int], torch.Tensor],
+        key: tuple[int, int],
+        correlation: float,
+    ) -> torch.Tensor:
+        innovation = self._complex_normal((self.config.num_rbs, 2))
+        previous = state.get(key)
+        if previous is None:
+            current = innovation
+        else:
+            current = correlation * previous + sqrt(1.0 - correlation**2) * innovation
+        state[key] = current
+        return current
 
     def _entity_states(self) -> tuple[EntityState, ...]:
         return tuple(
@@ -286,6 +330,5 @@ class DynamicD2DSimulator:
         sample = max(self._random_float(), 1e-12)
         return -mean * log(sample)
 
-    def _exponential_tensor(self, shape: tuple[int, ...]) -> torch.Tensor:
-        samples = torch.rand(shape, generator=self.generator).clamp_min(1e-12)
-        return -torch.log(samples)
+    def _complex_normal(self, shape: tuple[int, ...]) -> torch.Tensor:
+        return torch.randn(shape, generator=self.generator) / sqrt(2.0)

@@ -10,7 +10,7 @@ The implementation is being built step by step from the accompanying TGNN-RRM ma
 - Rate/SINR computation for multi-RB D2D links.
 - Allocation constraint checks.
 - CTDG add/update/delete event construction from active link IDs and CSI tensors.
-- Dynamic D2D event generation from bounded mobility, distance-based pairing, and CSI snapshots.
+- Dynamic D2D event generation from bounded mobility, distance-based pairing, and temporally correlated CSI snapshots.
 - TGNN memory/message core with RB-allocation probabilities and power outputs.
 - Differentiable unsupervised loss for rate maximization with QoS and constraint penalties.
 - Unit tests using Python's built-in `unittest`.

@@ -19,7 +19,9 @@ def small_network_config(**overrides):
         "mean_link_duration_s": 100.0,
         "num_rbs": 3,
         "shadowing_std_db": 0.0,
+        "fading_correlation": 0.0,
         "csi_error_std": 0.0,
+        "csi_error_correlation": 0.0,
     }
     values.update(overrides)
     return DynamicNetworkConfig(**values)
@@ -62,6 +64,22 @@ class DynamicD2DSimulatorTests(unittest.TestCase):
         self.assertEqual(step.snapshot.active_links, ())
         self.assertEqual(step.snapshot.gains.shape, (0, 0, 3))
         self.assertEqual(step.events.events, ())
+
+    def test_fully_correlated_static_channel_is_stable(self):
+        simulator = DynamicD2DSimulator(
+            small_network_config(fading_correlation=1.0, csi_error_correlation=1.0),
+            seed=5,
+        )
+
+        first = simulator.step()
+        second = simulator.step()
+
+        self.assertEqual(first.snapshot.active_ids, second.snapshot.active_ids)
+        self.assertTrue(torch.equal(first.snapshot.gains, second.snapshot.gains))
+
+    def test_rejects_invalid_channel_correlation(self):
+        with self.assertRaisesRegex(ValueError, "fading_correlation"):
+            DynamicD2DSimulator(small_network_config(fading_correlation=1.1), seed=1)
 
 
 if __name__ == "__main__":
