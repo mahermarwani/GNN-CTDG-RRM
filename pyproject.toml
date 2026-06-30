@@ -12,7 +12,9 @@ license = { text = "MIT" }
 authors = [
   { name = "Maher Marwani" }
 ]
-dependencies = []
+dependencies = [
+  "torch"
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
