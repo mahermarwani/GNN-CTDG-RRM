@@ -32,6 +32,13 @@ from tgnn_rrm.simulation import (
     DynamicNetworkStep,
     EntityState,
 )
+from tgnn_rrm.sumo import (
+    SumoD2DSimulator,
+    SumoFCDTrace,
+    SumoMobileEntity,
+    SumoMobilityFrame,
+    load_sumo_fcd_trace,
+)
 from tgnn_rrm.tgnn import (
     TGNNConfig,
     TGNNOutput,
@@ -54,6 +61,10 @@ __all__ = [
     "RRMObjectiveConfig",
     "RRMObjectiveResult",
     "RadioConfig",
+    "SumoD2DSimulator",
+    "SumoFCDTrace",
+    "SumoMobileEntity",
+    "SumoMobilityFrame",
     "TGNNConfig",
     "TGNNOutput",
     "TGNNResourceAllocator",
@@ -64,6 +75,7 @@ __all__ = [
     "constraint_violations",
     "is_pymoo_available",
     "link_rates",
+    "load_sumo_fcd_trace",
     "mean_rate",
     "qos_violation_fraction",
     "solve_snapshot_with_pymoo",

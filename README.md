@@ -83,3 +83,17 @@ python scripts/generate_pymoo_labels.py --steps 5
 The default benchmark profile is intentionally dense and interference-heavy.
 Use `--num-entities`, `--max-pair-distance-m`, or `--min-rate-bps` to tune
 hardness for smaller or larger experiments.
+
+## SUMO Mobility Traces
+
+SUMO realism is supported through FCD XML traces. Export vehicles and
+pedestrians from SUMO, then preview the resulting D2D event stream:
+
+```bash
+sumo -c scenario.sumocfg --fcd-output runs/sumo_fcd.xml
+python scripts/preview_sumo_trace.py runs/sumo_fcd.xml --steps 20
+```
+
+The parser consumes `<vehicle>` and `<person>` entries, maps SUMO IDs to stable
+numeric entity IDs, then reuses the existing D2D link, channel, and CTDG event
+pipeline.
