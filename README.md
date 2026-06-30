@@ -2,7 +2,7 @@
 
 Reimplementation of an event-based Temporal Graph Neural Network (TGNN) for radio resource management in dynamic D2D wireless networks.
 
-The implementation is being built step by step from the accompanying TGNN-RRM manuscript. The current milestone provides wireless rate utilities, a PyTorch-based CTDG event layer, a lightweight dynamic D2D simulator, and an initial TGNN resource-allocation core; later milestones will add training and evaluation scripts.
+The implementation is being built step by step from the accompanying TGNN-RRM manuscript. The current milestone provides wireless rate utilities, a PyTorch-based CTDG event layer, a lightweight dynamic D2D simulator, an initial TGNN resource-allocation core, and differentiable RRM objectives; later milestones will add training and evaluation scripts.
 
 ## Current Status
 
@@ -12,6 +12,7 @@ The implementation is being built step by step from the accompanying TGNN-RRM ma
 - CTDG add/update/delete event construction from active link IDs and CSI tensors.
 - Dynamic D2D event generation from bounded mobility, distance-based pairing, and CSI snapshots.
 - TGNN memory/message core with RB-allocation probabilities and power outputs.
+- Differentiable unsupervised loss for rate maximization with QoS and constraint penalties.
 - Unit tests using Python's built-in `unittest`.
 
 ## Minimal Event Stream Example
@@ -39,6 +40,22 @@ output = model(step.events)
 print(output.rb_probabilities.shape)
 print(output.rb_allocation.shape)
 print(output.power.shape)
+```
+
+## Minimal Unsupervised Objective
+
+```python
+from tgnn_rrm.config import RadioConfig
+from tgnn_rrm.objectives import unsupervised_rrm_loss
+
+result = unsupervised_rrm_loss(
+    gains=step.snapshot.gains,
+    allocation=output.rb_probabilities,
+    power=output.power,
+    radio_config=RadioConfig(num_rbs=5),
+    p_max=0.1,
+)
+result.loss.backward()
 ```
 
 ## Quick Check

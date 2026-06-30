@@ -2,6 +2,13 @@
 
 from tgnn_rrm.config import RadioConfig
 from tgnn_rrm.ctdg import CTDGEventBatch, EventType, InteractionEvent, build_ctdg_events
+from tgnn_rrm.objectives import (
+    RRMObjectiveConfig,
+    RRMObjectiveResult,
+    torch_link_rates,
+    torch_mean_rate,
+    unsupervised_rrm_loss,
+)
 from tgnn_rrm.radio import (
     constraint_violations,
     link_rates,
@@ -33,6 +40,8 @@ __all__ = [
     "EntityState",
     "EventType",
     "InteractionEvent",
+    "RRMObjectiveConfig",
+    "RRMObjectiveResult",
     "RadioConfig",
     "TGNNConfig",
     "TGNNOutput",
@@ -43,4 +52,7 @@ __all__ = [
     "link_rates",
     "mean_rate",
     "qos_violation_fraction",
+    "torch_link_rates",
+    "torch_mean_rate",
+    "unsupervised_rrm_loss",
 ]
