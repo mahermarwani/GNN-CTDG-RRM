@@ -40,11 +40,10 @@ def main() -> None:
         generations=args.generations,
         seed=args.seed,
         p_max_watt=args.p_max_watt,
-        qos_penalty_weight=args.qos_penalty_weight,
     )
 
     rows = []
-    for step in simulator.run(args.steps):
+    for _slot_index, step in enumerate(simulator.run(args.steps), start=1):
         if not step.snapshot.active_links:
             continue
         result = solve_snapshot_with_pymoo(
@@ -52,6 +51,7 @@ def main() -> None:
             radio_config=radio_config,
             benchmark_config=benchmark_config,
             p_max=args.p_max_watt,
+            verbose=args.verbose,
         )
         rows.append(
             {
@@ -107,7 +107,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--csi-error-correlation", type=float, default=0.8)
     parser.add_argument("--population-size", type=int, default=24)
     parser.add_argument("--generations", type=int, default=12)
-    parser.add_argument("--qos-penalty-weight", type=float, default=2.0)
+    parser.add_argument("--verbose", action="store_true")
     return parser.parse_args()
 
 

@@ -21,7 +21,6 @@ class PymooBenchmarkConfig:
     generations: int = 80
     seed: int | None = None
     p_max_watt: float = 10 ** ((4.0 - 30.0) / 10.0)
-    qos_penalty_weight: float = 1.0
     rate_scale_bps: float = 1_000.0
 
     def validate(self) -> None:
@@ -31,8 +30,6 @@ class PymooBenchmarkConfig:
             raise ValueError("generations must be positive")
         if self.p_max_watt <= 0:
             raise ValueError("p_max_watt must be positive")
-        if self.qos_penalty_weight < 0:
-            raise ValueError("qos_penalty_weight must be non-negative")
         if self.rate_scale_bps <= 0:
             raise ValueError("rate_scale_bps must be positive")
 
@@ -60,6 +57,7 @@ def solve_snapshot_with_pymoo(
     radio_config: RadioConfig,
     benchmark_config: PymooBenchmarkConfig | None = None,
     p_max: torch.Tensor | float | None = None,
+    verbose: bool = False,
 ) -> PymooRRMResult:
     """Solve one CSI snapshot with a PyMOO genetic algorithm.
 
@@ -99,33 +97,49 @@ def solve_snapshot_with_pymoo(
 
     class SnapshotProblem(ElementwiseProblem):
         def __init__(self) -> None:
-            super().__init__(n_var=variable_count, n_obj=1, xl=0.0, xu=1.0)
+            super().__init__(
+                n_var=variable_count,
+                n_obj=1,
+                n_ieq_constr=3 * num_links + num_links * num_rbs,
+                xl=0.0,
+                xu=1.0,
+            )
 
         def _evaluate(self, candidate, out, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
-            allocation, power = candidate_to_allocation_power(
+            allocation, power = candidate_to_relaxed_allocation_power(
                 candidate=candidate,
                 num_links=num_links,
                 num_rbs=num_rbs,
-                max_rbs_per_link=radio_config.max_rbs_per_link,
                 p_max=p_max_tensor,
                 dtype=gains.dtype,
                 device=gains.device,
             )
             rates = torch_link_rates(gains, allocation, power, radio_config)
-            mean_rate = rates.mean()
-            qos_gap = torch.relu(radio_config.min_rate_bps - rates) / config.rate_scale_bps
-            objective = -mean_rate / config.rate_scale_bps + config.qos_penalty_weight * torch.mean(qos_gap.pow(2))
+            objective = -rates.mean() / config.rate_scale_bps if rates.numel() else torch.tensor(0.0, device=gains.device)
+            qos_gap = radio_config.min_rate_bps - rates
+            rb_gap = allocation.sum(dim=1) - radio_config.max_rbs_per_link
+            power_gap = power.sum(dim=1) - p_max_tensor
+            inactive_gap = power - allocation * p_max_tensor.unsqueeze(1)
             out["F"] = float(objective.detach())
+            out["G"] = torch.cat((qos_gap, rb_gap, power_gap, inactive_gap.reshape(-1))).detach().cpu().numpy()
 
     result = minimize(
         SnapshotProblem(),
         GA(pop_size=config.population_size),
         termination=get_termination("n_gen", config.generations),
         seed=config.seed,
-        verbose=False,
+        verbose=verbose,
     )
+    candidate = result.X
+    if candidate is None:
+        population = getattr(result, "pop", None)
+        if population is None or len(population) == 0:
+            raise RuntimeError("PyMOO did not return a candidate solution")
+        candidate_values = torch.as_tensor(population.get("X"))
+        constraint_values = torch.as_tensor(population.get("CV")).reshape(-1)
+        candidate = candidate_values[int(torch.argmin(constraint_values))].tolist()
     allocation, power = candidate_to_allocation_power(
-        candidate=result.X,
+        candidate=candidate,
         num_links=num_links,
         num_rbs=num_rbs,
         max_rbs_per_link=radio_config.max_rbs_per_link,
@@ -201,6 +215,28 @@ def candidate_to_allocation_power(
     normalized_power = raw_power * scale
     p_max_vector = _p_max_vector(p_max, num_links, tensor.device, dtype).unsqueeze(1)
     power = normalized_power * p_max_vector
+    return allocation, power
+
+
+def candidate_to_relaxed_allocation_power(
+    candidate: Sequence[float],
+    num_links: int,
+    num_rbs: int,
+    p_max: torch.Tensor | float,
+    dtype: torch.dtype = torch.float32,
+    device: torch.device | None = None,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Decode a candidate into relaxed allocation and power tensors."""
+
+    expected_length = 2 * num_links * num_rbs
+    if len(candidate) != expected_length:
+        raise ValueError("candidate length must be 2 * num_links * num_rbs")
+
+    tensor = torch.as_tensor(candidate, dtype=dtype, device=device).reshape(2, num_links, num_rbs)
+    allocation = tensor[0].clamp(0.0, 1.0)
+    power_fraction = tensor[1].clamp(0.0, 1.0)
+    p_max_vector = _p_max_vector(p_max, num_links, tensor.device, dtype).unsqueeze(1)
+    power = power_fraction * p_max_vector
     return allocation, power
 
 
