@@ -63,3 +63,9 @@ result.loss.backward()
 ```bash
 python -m unittest discover -s tests
 ```
+
+## Loss Progress Example
+
+```bash
+python scripts/train_unsupervised.py
+```
