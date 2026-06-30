@@ -16,5 +16,10 @@ dependencies = [
   "torch"
 ]
 
+[project.optional-dependencies]
+benchmark = [
+  "pymoo"
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]

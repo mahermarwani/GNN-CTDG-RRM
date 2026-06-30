@@ -13,6 +13,7 @@ The implementation is being built step by step from the accompanying TGNN-RRM ma
 - Dynamic D2D event generation from bounded mobility, distance-based pairing, and temporally correlated CSI snapshots.
 - TGNN memory/message core with RB-allocation probabilities and power outputs.
 - Differentiable unsupervised loss for rate maximization with QoS and constraint penalties.
+- Optional PyMOO benchmark generation for near-optimal RB and power labels.
 - Unit tests using Python's built-in `unittest`.
 
 ## Minimal Event Stream Example
@@ -68,4 +69,13 @@ python -m unittest discover -s tests
 
 ```bash
 python scripts/train_unsupervised.py
+```
+
+## PyMOO Benchmark Labels
+
+Install the optional benchmark dependency, then generate labels:
+
+```bash
+pip install ".[benchmark]"
+python scripts/generate_pymoo_labels.py --steps 5
 ```

@@ -9,6 +9,14 @@ from tgnn_rrm.objectives import (
     torch_mean_rate,
     unsupervised_rrm_loss,
 )
+from tgnn_rrm.pymoo_benchmark import (
+    PymooBenchmarkConfig,
+    PymooRRMResult,
+    candidate_to_allocation_power,
+    is_pymoo_available,
+    solve_snapshot_with_pymoo,
+    solve_snapshots_with_pymoo,
+)
 from tgnn_rrm.radio import (
     constraint_violations,
     link_rates,
@@ -40,6 +48,8 @@ __all__ = [
     "EntityState",
     "EventType",
     "InteractionEvent",
+    "PymooBenchmarkConfig",
+    "PymooRRMResult",
     "RRMObjectiveConfig",
     "RRMObjectiveResult",
     "RadioConfig",
@@ -48,10 +58,14 @@ __all__ = [
     "TGNNResourceAllocator",
     "TemporalEncoding",
     "build_ctdg_events",
+    "candidate_to_allocation_power",
     "constraint_violations",
+    "is_pymoo_available",
     "link_rates",
     "mean_rate",
     "qos_violation_fraction",
+    "solve_snapshot_with_pymoo",
+    "solve_snapshots_with_pymoo",
     "torch_link_rates",
     "torch_mean_rate",
     "unsupervised_rrm_loss",
