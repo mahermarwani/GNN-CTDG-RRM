@@ -8,9 +8,23 @@ from tgnn_rrm.radio import (
     mean_rate,
     qos_violation_fraction,
 )
+from tgnn_rrm.simulation import (
+    D2DLink,
+    DynamicD2DSimulator,
+    DynamicNetworkConfig,
+    DynamicNetworkSnapshot,
+    DynamicNetworkStep,
+    EntityState,
+)
 
 __all__ = [
     "CTDGEventBatch",
+    "D2DLink",
+    "DynamicD2DSimulator",
+    "DynamicNetworkConfig",
+    "DynamicNetworkSnapshot",
+    "DynamicNetworkStep",
+    "EntityState",
     "EventType",
     "InteractionEvent",
     "RadioConfig",
