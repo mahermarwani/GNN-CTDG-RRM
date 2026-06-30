@@ -16,6 +16,12 @@ from tgnn_rrm.simulation import (
     DynamicNetworkStep,
     EntityState,
 )
+from tgnn_rrm.tgnn import (
+    TGNNConfig,
+    TGNNOutput,
+    TGNNResourceAllocator,
+    TemporalEncoding,
+)
 
 __all__ = [
     "CTDGEventBatch",
@@ -28,6 +34,10 @@ __all__ = [
     "EventType",
     "InteractionEvent",
     "RadioConfig",
+    "TGNNConfig",
+    "TGNNOutput",
+    "TGNNResourceAllocator",
+    "TemporalEncoding",
     "build_ctdg_events",
     "constraint_violations",
     "link_rates",
