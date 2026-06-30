@@ -79,3 +79,7 @@ Install the optional benchmark dependency, then generate labels:
 pip install ".[benchmark]"
 python scripts/generate_pymoo_labels.py --steps 5
 ```
+
+The default benchmark profile is intentionally dense and interference-heavy.
+Use `--num-entities`, `--max-pair-distance-m`, or `--min-rate-bps` to tune
+hardness for smaller or larger experiments.

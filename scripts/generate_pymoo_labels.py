@@ -23,6 +23,7 @@ def main() -> None:
             link_creation_probability=args.link_creation_probability,
             mean_link_duration_s=args.mean_link_duration_s,
             num_rbs=args.num_rbs,
+            shadowing_std_db=args.shadowing_std_db,
             fading_correlation=args.fading_correlation,
             csi_error_std=args.csi_error_std,
             csi_error_correlation=args.csi_error_correlation,
@@ -90,22 +91,23 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, default=Path("runs/pymoo_labels.pt"))
     parser.add_argument("--steps", type=int, default=5)
     parser.add_argument("--seed", type=int, default=7)
-    parser.add_argument("--num-entities", type=int, default=10)
-    parser.add_argument("--area-width-m", type=float, default=300.0)
-    parser.add_argument("--area-height-m", type=float, default=300.0)
-    parser.add_argument("--max-pair-distance-m", type=float, default=200.0)
-    parser.add_argument("--link-creation-probability", type=float, default=0.5)
-    parser.add_argument("--mean-link-duration-s", type=float, default=10.0)
+    parser.add_argument("--num-entities", type=int, default=12)
+    parser.add_argument("--area-width-m", type=float, default=60.0)
+    parser.add_argument("--area-height-m", type=float, default=60.0)
+    parser.add_argument("--max-pair-distance-m", type=float, default=60.0)
+    parser.add_argument("--link-creation-probability", type=float, default=1.0)
+    parser.add_argument("--mean-link-duration-s", type=float, default=6.0)
     parser.add_argument("--num-rbs", type=int, default=5)
     parser.add_argument("--max-rbs-per-link", type=int, default=1)
-    parser.add_argument("--min-rate-bps", type=float, default=7_000.0)
-    parser.add_argument("--p-max-watt", type=float, default=10 ** ((4.0 - 30.0) / 10.0))
-    parser.add_argument("--fading-correlation", type=float, default=0.9)
-    parser.add_argument("--csi-error-std", type=float, default=0.1)
-    parser.add_argument("--csi-error-correlation", type=float, default=0.9)
-    parser.add_argument("--population-size", type=int, default=64)
-    parser.add_argument("--generations", type=int, default=80)
-    parser.add_argument("--qos-penalty-weight", type=float, default=1.0)
+    parser.add_argument("--min-rate-bps", type=float, default=12_000.0)
+    parser.add_argument("--p-max-watt", type=float, default=10 ** ((0.0 - 30.0) / 10.0))
+    parser.add_argument("--shadowing-std-db", type=float, default=8.0)
+    parser.add_argument("--fading-correlation", type=float, default=0.8)
+    parser.add_argument("--csi-error-std", type=float, default=0.15)
+    parser.add_argument("--csi-error-correlation", type=float, default=0.8)
+    parser.add_argument("--population-size", type=int, default=24)
+    parser.add_argument("--generations", type=int, default=12)
+    parser.add_argument("--qos-penalty-weight", type=float, default=2.0)
     return parser.parse_args()
 
 
