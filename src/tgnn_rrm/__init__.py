@@ -18,6 +18,7 @@ from tgnn_rrm.pymoo_benchmark import (
     solve_snapshot_with_pymoo,
     solve_snapshots_with_pymoo,
 )
+from tgnn_rrm.plotting import TrainingMetricRow, load_training_metrics, plot_training_metrics
 from tgnn_rrm.radio import (
     constraint_violations,
     link_rates,
@@ -38,6 +39,11 @@ from tgnn_rrm.sumo import (
     SumoMobileEntity,
     SumoMobilityFrame,
     load_sumo_fcd_trace,
+)
+from tgnn_rrm.sumo_training import (
+    SumoTrainingMetrics,
+    SumoTrainingResult,
+    train_sumo_unsupervised,
 )
 from tgnn_rrm.tgnn import (
     TGNNConfig,
@@ -65,22 +71,28 @@ __all__ = [
     "SumoFCDTrace",
     "SumoMobileEntity",
     "SumoMobilityFrame",
+    "SumoTrainingMetrics",
+    "SumoTrainingResult",
     "TGNNConfig",
     "TGNNOutput",
     "TGNNResourceAllocator",
     "TemporalEncoding",
+    "TrainingMetricRow",
     "build_ctdg_events",
     "candidate_to_allocation_power",
     "candidate_to_relaxed_allocation_power",
     "constraint_violations",
     "is_pymoo_available",
     "link_rates",
+    "load_training_metrics",
     "load_sumo_fcd_trace",
     "mean_rate",
+    "plot_training_metrics",
     "qos_violation_fraction",
     "solve_snapshot_with_pymoo",
     "solve_snapshots_with_pymoo",
     "torch_link_rates",
     "torch_mean_rate",
+    "train_sumo_unsupervised",
     "unsupervised_rrm_loss",
 ]

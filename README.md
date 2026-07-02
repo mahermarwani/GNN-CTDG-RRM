@@ -92,8 +92,38 @@ pedestrians from SUMO, then preview the resulting D2D event stream:
 ```bash
 sumo -c scenario.sumocfg --fcd-output runs/sumo_fcd.xml
 python scripts/preview_sumo_trace.py runs/sumo_fcd.xml --steps 20
+python scripts/train_sumo_unsupervised.py runs/sumo_fcd.xml --device cpu --train-steps 100 --eval-steps 20
 ```
 
 The parser consumes `<vehicle>` and `<person>` entries, maps SUMO IDs to stable
 numeric entity IDs, then reuses the existing D2D link, channel, and CTDG event
 pipeline.
+
+For longer runs, save metrics and checkpoints under ignored `runs/` paths:
+
+```bash
+python scripts/train_sumo_unsupervised.py runs/sumo_fcd.xml \
+  --device auto \
+  --epochs 25 \
+  --train-steps 500 \
+  --eval-steps 100 \
+  --optimizer adam \
+  --grad-clip-norm 1.0 \
+  --max-interference-neighbors 4 \
+  --metrics-csv runs/logs/sumo_cpu_metrics.csv \
+  --checkpoint runs/checkpoints/sumo_cpu.pt
+python scripts/plot_training_metrics.py runs/logs/sumo_cpu_metrics.csv --output-dir runs/plots/sumo_cpu
+```
+
+On Narval, submit the GPU job script after creating a sufficiently long FCD
+trace such as `runs/sumo_long_fcd.xml`:
+
+```bash
+sbatch scripts/slurm_train_sumo_gpu.sh
+```
+
+Override defaults when needed:
+
+```bash
+EPOCHS=200 TRAIN_STEPS=9000 EVAL_STEPS=1000 OPTIMIZER=adam sbatch scripts/slurm_train_sumo_gpu.sh
+```

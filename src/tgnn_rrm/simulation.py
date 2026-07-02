@@ -33,6 +33,7 @@ class DynamicNetworkConfig:
     csi_error_std: float = 0.1
     csi_error_correlation: float = 0.9
     min_distance_m: float = 1.0
+    max_interference_neighbors: int | None = None
 
     def validate(self) -> None:
         if self.num_entities < 0:
@@ -65,6 +66,8 @@ class DynamicNetworkConfig:
             raise ValueError("csi_error_correlation must be in [0, 1]")
         if self.min_distance_m <= 0:
             raise ValueError("min_distance_m must be positive")
+        if self.max_interference_neighbors is not None and self.max_interference_neighbors <= 0:
+            raise ValueError("max_interference_neighbors must be positive when set")
 
 
 @dataclass(frozen=True)
@@ -149,6 +152,7 @@ class DynamicD2DSimulator:
             previous_gains=self._previous_gains,
             current_gains=gains,
             time=self._time,
+            max_interference_neighbors=self.config.max_interference_neighbors,
         )
         snapshot = DynamicNetworkSnapshot(
             time=self._time,

@@ -48,16 +48,20 @@ def build_ctdg_events(
     previous_gains: torch.Tensor | None,
     current_gains: torch.Tensor,
     time: float,
+    max_interference_neighbors: int | None = None,
 ) -> CTDGEventBatch:
     """Build CTDG events from active-link IDs and CSI snapshots.
 
     ``gains[i, j, k]`` is the gain from transmitter ``j`` to receiver ``i`` on
     RB ``k``. Direct CSI ``gains[i, i, :]`` becomes node features, and directed
-    interference CSI ``gains[src, dst, :]`` becomes edge features.
+    interference CSI ``gains[src, dst, :]`` becomes edge features. When
+    ``max_interference_neighbors`` is set, each source link only emits events
+    to the strongest interferers measured by max CSI across RBs.
     """
 
     previous_ids = _validate_ids(previous_active_ids, "previous_active_ids")
     current_ids = _validate_ids(current_active_ids, "current_active_ids")
+    _validate_max_interference_neighbors(max_interference_neighbors)
     _validate_gains(current_gains, len(current_ids), "current_gains")
 
     previous_id_set = set(previous_ids)
@@ -80,6 +84,13 @@ def build_ctdg_events(
     for source_id in current_ids:
         event_type = EventType.ADD if source_id in added_ids else EventType.UPDATE
         destination_ids = tuple(link_id for link_id in current_ids if link_id != source_id)
+        destination_ids = _strongest_interference_ids(
+            source_id=source_id,
+            destination_ids=destination_ids,
+            gains=current_gains,
+            indices=current_index,
+            max_interference_neighbors=max_interference_neighbors,
+        )
         if destination_ids:
             for destination_id in destination_ids:
                 events.append(
@@ -108,6 +119,14 @@ def build_ctdg_events(
         surviving_ids = tuple(link_id for link_id in current_ids if link_id in previous_id_set)
         for source_id in deleted_ids:
             destination_ids = surviving_ids if surviving_ids else (source_id,)
+            if surviving_ids:
+                destination_ids = _strongest_interference_ids(
+                    source_id=source_id,
+                    destination_ids=destination_ids,
+                    gains=previous_gains,
+                    indices=previous_index,
+                    max_interference_neighbors=max_interference_neighbors,
+                )
             for destination_id in destination_ids:
                 if destination_id == source_id:
                     events.append(
@@ -187,6 +206,30 @@ def _validate_ids(ids: Sequence[int], name: str) -> tuple[int, ...]:
     if len(set(normalized)) != len(normalized):
         raise ValueError(f"{name} must not contain duplicate IDs")
     return normalized
+
+
+def _strongest_interference_ids(
+    source_id: int,
+    destination_ids: tuple[int, ...],
+    gains: torch.Tensor,
+    indices: dict[int, int],
+    max_interference_neighbors: int | None,
+) -> tuple[int, ...]:
+    if max_interference_neighbors is None or len(destination_ids) <= max_interference_neighbors:
+        return destination_ids
+    source_index = indices[source_id]
+    ranked = sorted(
+        destination_ids,
+        key=lambda destination_id: float(torch.max(gains[source_index, indices[destination_id], :]).detach()),
+        reverse=True,
+    )
+    selected = set(ranked[:max_interference_neighbors])
+    return tuple(destination_id for destination_id in destination_ids if destination_id in selected)
+
+
+def _validate_max_interference_neighbors(max_interference_neighbors: int | None) -> None:
+    if max_interference_neighbors is not None and max_interference_neighbors <= 0:
+        raise ValueError("max_interference_neighbors must be positive when set")
 
 
 def _validate_gains(gains: torch.Tensor, expected_links: int, name: str) -> None:

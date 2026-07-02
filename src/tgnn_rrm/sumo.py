@@ -137,6 +137,7 @@ class SumoD2DSimulator:
             previous_gains=self._previous_gains,
             current_gains=gains,
             time=frame.time,
+            max_interference_neighbors=self.config.max_interference_neighbors,
         )
         snapshot = DynamicNetworkSnapshot(
             time=frame.time,

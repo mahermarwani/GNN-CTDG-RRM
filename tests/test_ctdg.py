@@ -88,6 +88,35 @@ class CTDGEventBuilderTests(unittest.TestCase):
         self.assertTrue(torch.equal(event.destination_features, torch.tensor([7.0, 8.0])))
         self.assertTrue(torch.equal(event.edge_features, torch.tensor([3.0, 4.0])))
 
+    def test_limits_events_to_strongest_interference_neighbors(self):
+        gains = torch.zeros((4, 4, 1))
+        gains[0, 0, 0] = 1.0
+        gains[1, 1, 0] = 1.0
+        gains[2, 2, 0] = 1.0
+        gains[3, 3, 0] = 1.0
+        gains[0, 1, 0] = 10.0
+        gains[0, 2, 0] = 30.0
+        gains[0, 3, 0] = 20.0
+
+        batch = build_ctdg_events(
+            previous_active_ids=[],
+            current_active_ids=[10, 20, 30, 40],
+            previous_gains=None,
+            current_gains=gains,
+            time=0.0,
+            max_interference_neighbors=2,
+        )
+
+        self.assertEqual(len(batch.events), 8)
+        self.assertEqual(
+            {
+                event.destination_id
+                for event in batch.events
+                if event.source_id == 10
+            },
+            {30, 40},
+        )
+
     def test_isolated_active_link_emits_self_event_with_zero_edge_features(self):
         gains = torch.tensor([[[2.0, 3.0]]])
 
